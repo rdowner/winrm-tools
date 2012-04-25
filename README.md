@@ -34,11 +34,11 @@ many manual steps; this project is intended to automate this as much
 as possible, reducing it to a one-liner.
 
 Currently, the aim of the project is to assist in modifying a vanilla
-Windows Server 2008 R2 instance inside Amazon EC2, configuring it to
-allow the ["overthere"][overthere] project to connect to the WinRM
-port in a reasonably secure manner. While it's not exclusively limited
-to this kind of setup, at the moment the scripts do make assumptions
-to that end.
+Windows Server 2008 R2, configuring it to allow the
+["overthere"][overthere] project to connect to the WinRM port in a
+reasonably secure manner. While it's not exclusively limited to this
+kind of setup, at the moment the scripts do make assumptions to that
+end.
 
 [overthere]: https://github.com/xebialabs/overthere
 
@@ -46,13 +46,28 @@ to that end.
 Usage
 =====
 
+When running on Windows Server 2008 R2, you can start a Command Prompt and execute this one-liner:
+
+```
+PowerShell -Command "Set-ExecutionPolicy RemoteSigned ; (new-object System.Net.WebClient).DownloadFile(\"https://github.com/rdowner/winrm-tools/raw/master/enable-winrm.ps1\", \"enable-winrm.ps1\") ; ./enable-winrm.ps1 -HostnameFromDNS"
+```
+
+This will configure WinRM for you. Part of this involves creating an
+SSL certificate; the -HostnameFromDNS argument will use the system's
+DNS name. You can instead replace this parameter with a string of the
+hostname to use for the SSL certificate.
+
+
+Amazon EC2
+----------
+
 Boot up an Amazon EC2 instance based on the [Amazon-provided Windows
 Server 2008 R2 images][AMIs]. Log in using Remote Desktop as Administrator,
 and open a Command Prompt window. Copy-and-paste this one-liner to
 bootstrap the WinRM-Tools module, and activate WinRM:
 
 ```
-PowerShell -Command "Set-ExecutionPolicy RemoteSigned ; (new-object System.Net.WebClient).DownloadFile(\"https://github.com/rdowner/winrm-tools/raw/master/enable-winrm.ps1\", \"enable-winrm.ps1\") ; ./enable-winrm.ps1"
+PowerShell -Command "Set-ExecutionPolicy RemoteSigned ; (new-object System.Net.WebClient).DownloadFile(\"https://github.com/rdowner/winrm-tools/raw/master/enable-winrm.ps1\", \"enable-winrm.ps1\") ; ./enable-winrm.ps1 -HostnameFromEC2"
 ```
 
 Re-seal the EC2 image:
