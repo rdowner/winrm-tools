@@ -46,29 +46,41 @@ function Enable-WinRM {
 	Set-WSManInstance WinRM/Config/WinRS -ValueSet @{MaxMemoryPerShellMB = 1024} | Out-Null
 	Set-WSManInstance WinRM/Config/Client -ValueSet @{TrustedHosts="*"} | Out-Null
 	
-	# Determine hostname to use in certificate
-	if ($HostnameFromEC2) {
-		$ec2hostname = (New-Object System.Net.WebClient).DownloadString("http://169.254.169.254/2011-01-01/meta-data/public-hostname")
-		$Hostname = $ec2hostname
+	# Check if a suitable WinRM listener is available; create one if not
+	try {
+		$listenerRequired = (-not(Get-WSManInstance WinRM/Config/Listener -SelectorSet @{Address = "*"; Transport = "HTTPS"}))
+	} catch [InvalidOperationException] {
+		$listenerRequired = $true
 	}
-	if ($HostnameFromDNS) {
-		$dnshostname = [System.Net.Dns]::GetHostName()
-		$Hostname = $dnshostname
-	}
-	echo "Using hostname: $Hostname"
-
-	# Generate SSL certificate
-	$certname = "CN=$Hostname"
-	echo "Generating SSL certificate for: $certname"
-	New-SelfSignedCertificate $certname
+	if ($listenerRequired) {
 	
-	# Get the thumbprints of the SSL certificates that match the hostname
-	$thumbprints = Get-Childitem -path cert:\LocalMachine\My | Where-Object { $_.Subject -eq "CN=$hostname" } | Select-Object -Property Thumbprint
-	# PowerShell magic to retrieve the first matching thumbprint (there'll probably only be one anyway)
-	$thumbprint = @($thumbprints)[0].Thumbprint
-	# Create a WinRM listener, identifying the SSL certificate by the thumbprint
-	New-WSManInstance WinRM/Config/Listener -SelectorSet @{Address = "*"; Transport = "HTTPS"} -ValueSet @{Hostname = $hostname; CertificateThumbprint = $thumbprint}
+		# Determine hostname to use in certificate
+		if ($HostnameFromEC2) {
+			$ec2hostname = (New-Object System.Net.WebClient).DownloadString("http://169.254.169.254/2011-01-01/meta-data/public-hostname")
+			$Hostname = $ec2hostname
+		}
+		if ($HostnameFromDNS) {
+			$dnshostname = [System.Net.Dns]::GetHostName()
+			$Hostname = $dnshostname
+		}
+		echo "Using hostname: $Hostname"
+
+		# Generate SSL certificate
+		$certname = "CN=$Hostname"
+		echo "Generating SSL certificate for: $certname"
+		New-SelfSignedCertificate $certname
+		
+		# Get the thumbprints of the SSL certificates that match the hostname
+		$thumbprints = Get-Childitem -path cert:\LocalMachine\My | Where-Object { $_.Subject -eq $certname } | Select-Object -Property Thumbprint
+		# PowerShell magic to retrieve the first matching thumbprint (there'll probably only be one anyway)
+		$thumbprint = @($thumbprints)[0].Thumbprint
+		# Create a WinRM listener, identifying the SSL certificate by the thumbprint
+		New-WSManInstance WinRM/Config/Listener -SelectorSet @{Address = "*"; Transport = "HTTPS"} -ValueSet @{Hostname = $hostname; CertificateThumbprint = $thumbprint} | Out-Null
+	} else {
+		echo "A WSManInstance already exists, so a new one won't be created"
+	}
 	
 	Add-FirewallRule "Windows Remote Management HTTP/SSL" "5986" $null $null
 
+	echo "Completed successfully."
 }
