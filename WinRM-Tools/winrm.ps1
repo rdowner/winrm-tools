@@ -15,6 +15,11 @@
 # limitations under the License.
 
 function Enable-WinRM {
+	param (
+		[Parameter(Position=0)] [string] $Hostname = ( hostname ),
+		[Parameter()] [switch] $HostnameFromEC2,
+		[Parameter()] [switch] $HostnameFromDNS
+	)
 	
 	# Stop the script if an error occurs
 	$ErrorActionPreference="Stop"
@@ -41,9 +46,21 @@ function Enable-WinRM {
 	Set-WSManInstance WinRM/Config/WinRS -ValueSet @{MaxMemoryPerShellMB = 1024} | Out-Null
 	Set-WSManInstance WinRM/Config/Client -ValueSet @{TrustedHosts="*"} | Out-Null
 	
+	# Determine hostname to use in certificate
+	if ($HostnameFromEC2) {
+		$ec2hostname = (New-Object System.Net.WebClient).DownloadString("http://169.254.169.254/2011-01-01/meta-data/public-hostname")
+		$Hostname = $ec2hostname
+	}
+	if ($HostnameFromDNS) {
+		$dnshostname = [System.Net.Dns]::GetHostName()
+		$Hostname = $dnshostname
+	}
+	echo "Using hostname: $Hostname"
+
 	# Generate SSL certificate
-	$hostname = (New-Object System.Net.WebClient).DownloadString("http://169.254.169.254/2011-01-01/meta-data/public-hostname")
-	New-SelfSignedCertificate "CN=$hostname"
+	$certname = "CN=$Hostname"
+	echo "Generating SSL certificate for: $certname"
+	New-SelfSignedCertificate $certname
 	
 	# Get the thumbprints of the SSL certificates that match the hostname
 	$thumbprints = Get-Childitem -path cert:\LocalMachine\My | Where-Object { $_.Subject -eq "CN=$hostname" } | Select-Object -Property Thumbprint
