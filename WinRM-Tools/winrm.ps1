@@ -36,10 +36,10 @@ function Enable-WinRM {
 	}
 
 	# Configure WinRM
-	Set-WSManInstance WinRM/Config/Service/Auth -ValueSet @{Basic = $true}
-	Set-WSManInstance WinRM/Config/Service -ValueSet @{AllowUnencrypted = $true}
-	Set-WSManInstance WinRM/Config/WinRS -ValueSet @{MaxMemoryPerShellMB = 1024}
-	Set-WSManInstance WinRM/Config/Client -ValueSet @{TrustedHosts="*"}
+	Set-WSManInstance WinRM/Config/Service/Auth -ValueSet @{Basic = $true} | Out-Null
+	Set-WSManInstance WinRM/Config/Service -ValueSet @{AllowUnencrypted = $true} | Out-Null
+	Set-WSManInstance WinRM/Config/WinRS -ValueSet @{MaxMemoryPerShellMB = 1024} | Out-Null
+	Set-WSManInstance WinRM/Config/Client -ValueSet @{TrustedHosts="*"} | Out-Null
 	
 	# Generate SSL certificate
 	$hostname = (New-Object System.Net.WebClient).DownloadString("http://169.254.169.254/2011-01-01/meta-data/public-hostname")
