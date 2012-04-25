@@ -16,13 +16,25 @@
 
 function Enable-WinRM {
 	
-	# Install the Server Manager PowerShell module
-	Dism.exe /Online /Enable-Feature /FeatureName:ServerManager-PSH-Cmdlets
+	# Stop the script if an error occurs
+	$ErrorActionPreference="Stop"
 	
-	# Tell Windows Server Manager to install the WinRM feature
-	Import-Module servermanager
-	Add-WindowsFeature WinRm-IIS-Ext
+	# Test for the presence of the ServerManager module; install if not found
+	if (-not(Get-Module -Name ServerManager)) {
+		if (-not(Get-Module -ListAvailable | Where-Object {$_.Name -eq "ServerManager"})) {
+			echo "Server Manager PowerShell commandlets not available. Installing..."
+			Dism.exe /Online /Enable-Feature /FeatureName:ServerManager-PSH-Cmdlets
+		}
+		Import-Module ServerManager
+	}
 	
+	# Test for the presence of the WinRM feature; install if not found
+	echo "Checking WinRM IIS Extensions"
+	if (-not( Get-WindowsFeature -Name WinRM-IIS-Ext | Where-Object { $_.Installed } )) {
+		echo "Installing WinRM IIS Extensions"
+		Add-WindowsFeature WinRM-IIS-Ext | Out-Null
+	}
+
 	# Configure WinRM
 	Set-WSManInstance WinRM/Config/Service/Auth -ValueSet @{Basic = $true}
 	Set-WSManInstance WinRM/Config/Service -ValueSet @{AllowUnencrypted = $true}
