@@ -1,4 +1,4 @@
-# This function is obtained from:
+﻿# This function is obtained from:
 # http://blogs.technet.com/b/vishalagarwal/archive/2009/08/22/generating-a-certificate-self-signed-using-powershell-and-certenroll-interfaces.aspx
 # licensed under the Microsoft Limited Public License, which is
 # reproduced below.
@@ -98,7 +98,7 @@ function New-SelfSignedCertificate {
 	$cert.Subject = $name
 	$cert.Issuer = $cert.Subject
 	$cert.NotBefore = get-date
-	$cert.NotAfter = $cert.NotBefore.AddDays(90)
+	$cert.NotAfter = $cert.NotBefore.AddYears(1)
 	$cert.X509Extensions.Add($ekuext)
 	$cert.Encode()
 	
